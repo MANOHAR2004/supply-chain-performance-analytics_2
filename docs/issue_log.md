@@ -4,8 +4,10 @@
 **Column:** Freight Cost (USD)
 **Problem:** Stored as object instead of float64. Likely contains non-numeric characters.
 **Discovery Method:** df.info() output
-**Fix Applied:** Strip non-numeric characters, convert to float64
-**Status:** Pending
+**Fix Applied:** Strip non-numeric characters, convert to float64 using (df[
+    pd.to_numeric(df["Freight Cost (USD)"], errors="coerce").isna()
+])
+**Status:** Resolved
 
 ## Issue 002
 **Column:** Shipment Mode
@@ -32,22 +34,36 @@
 **Column:** All date columns (5 columns)
 **Problem:** Stored as object instead of datetime
 **Discovery Method:** df.info() output
-**Fix Applied:** Convert using pd.to_datetime()
-**Status:** Pending
+**Fix Applied:** **Fix Applied:** Converted all 5 date columns using pd.to_datetime() 
+with format="%Y-%m-%d" in a loop. Verified output visually confirms 
+correct 4-digit year parsing.
+**Status:** Resolved
+
 
 ## Issue 006
 **Column:** Freight Cost (USD)
-**Problem:** Stored as object instead of float64. Likely contains non-numeric characters.
-**Discovery Method:** df.info() output
-**Fix Applied:** Strip non-numeric characters, convert to float64
-**Status:** Pending
+**Problem:** Column contained three mixed value types — actual numeric 
+costs, reference strings (See DN-XXXX), and text entries 
+(Freight Included in Commodity Cost). Stored as object due to mixed types.
+**Discovery Method:** df["Freight Cost (USD)"].unique() and visual inspection
+**Fix Applied:** Created Freight_Type flag column using np.where() and 
+regex to classify rows as Absorbed (text) or Separate (numeric). 
+Then converted Freight Cost to numeric using pd.to_numeric(errors='coerce').
+Absorbed rows become NaN in Freight Cost — intentional and documented.
+**Business Note:** 4126 rows (39.9%) have absorbed freight — 
+significant finding for cost analysis. These rows excluded from 
+freight cost calculations but retained for delivery performance analysis.
+**Status:** Resolved
 
 ## Issue 007
-**Column:** Shipment Mode
-**Problem:** 360 null values (3.5% of data)
-**Discovery Method:** df.info() output
-**Fix Applied:** TBD after investigation
-**Status:** Pending
+**Column:** Weight (Kilograms)
+**Problem:** Mixed numeric and text values stored as object dtype.
+Text values include "Weight Captured Separately" and reference strings.
+**Discovery Method:** df["Weight (Kilograms)"].tail() inspection
+**Fix Applied:** Created Weight_Type flag column using np.where() 
+and str.contains() regex. Converted Weight to float64 using 
+pd.to_numeric(errors='coerce'). Text rows become NaN intentionally.
+**Status:** Resolved
 
 ## Issue 008
 **Column:** Dosage
