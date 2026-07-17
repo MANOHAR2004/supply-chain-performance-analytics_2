@@ -25,10 +25,19 @@
 
 ## Issue 004
 **Column:** Line Item Insurance (USD)
-**Problem:** 287 null values (2.8% of data)
-**Discovery Method:** df.info() output
-**Fix Applied:** TBD after investigation
-**Status:** Pending
+**Problem:** 287 null values (2.78% of data)
+**Discovery Method:** df.isnull().sum() and df.info() output
+**Investigation:** describe() output showed min value = 0, confirming 
+zero is a valid recorded value in this column. 54 rows already 
+recorded as 0 insurance. Null values investigated for two possible 
+interpretations — data not recorded vs genuinely zero insurance cost.
+**Decision Logic:** 2.78% is below the 5% bias threshold. Since zero 
+is already a valid value and the percentage is small, filling with 0 
+is conservative and does not meaningfully bias cost analysis.
+**Fix Applied:** df["Line Item Insurance (USD)"].fillna(0, inplace=True)
+**Verified:** isnull().sum() returned 0 after fix confirming all 
+nulls resolved.
+**Status:** Resolved
 
 ## Issue 005
 **Column:** All date columns (5 columns)
