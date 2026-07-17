@@ -19,7 +19,7 @@
 ## Issue 003
 **Column:** Dosage
 **Problem:** 1736 null values (16.8% of data)
-**Discovery Method:** df.info() output
+**Discovery Method:** df.info() output, and (df["Shipment Mode"].value_counts(dropna = False))
 **Fix Applied:** TBD after investigation
 **Status:** Pending
 
