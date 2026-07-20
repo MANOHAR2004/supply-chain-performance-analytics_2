@@ -11,17 +11,30 @@
 
 ## Issue 002
 **Column:** Shipment Mode
-**Problem:** 360 null values (3.5% of data)
-**Discovery Method:** df.info() output
-**Fix Applied:** TBD after investigation
-**Status:** Pending
+**Problem:** 360 null values (3.49% of data)
+**Discovery Method:** df.isnull().sum() and value_counts(dropna=False)
+**Investigation Finding:** All 360 null Shipment Mode rows have 
+Freight_Type = Absorbed and Freight Cost = NaN. Missing mode 
+correlates directly with absorbed freight — structural data gap, 
+not random missingness.
+**Fix Applied:** Filled nulls with "Unknown" using fillna("Unknown").
+Preserves rows for value analysis while excluding from mode-based 
+freight cost comparisons.
+**Status:** Resolved
 
 ## Issue 003
 **Column:** Dosage
 **Problem:** 1736 null values (16.8% of data)
-**Discovery Method:** df.info() output, and (df["Shipment Mode"].value_counts(dropna = False))
-**Fix Applied:** TBD after investigation
-**Status:** Pending
+**Discovery Method:** Cross-tabulation with Product Group column
+**Investigation Finding:** Null Dosage values belong exclusively to 
+HRDT (1728 rows) and MRDT (8 rows) product groups. ARV, ANTM, and 
+ACT have zero null Dosage values. Groups do not overlap — this is 
+structural, not random missingness. HRDT/MRDT are diagnostic test 
+kits where Dosage is not an applicable attribute.
+**Fix Applied:** Created Dosage_Applicable flag column using np.where.
+HRDT and MRDT flagged as "Not Applicable". Dosage nulls retained 
+as NaN — they are correct and meaningful, not data entry errors.
+**Status:** Resolved
 
 ## Issue 004
 **Column:** Line Item Insurance (USD)
@@ -75,18 +88,22 @@ pd.to_numeric(errors='coerce'). Text rows become NaN intentionally.
 **Status:** Resolved
 
 ## Issue 008
-**Column:** Dosage
-**Problem:** 1736 null values (16.8% of data)
-**Discovery Method:** df.info() output
-**Fix Applied:** TBD after investigation
-**Status:** Pending
+**Column:** Entire dataset
+**Problem:** CSV file uses latin1 encoding, not default UTF-8. 
+Causes UnicodeDecodeError without explicit encoding parameter.
+**Fix Applied:** Added encoding="latin1" in pd.read_csv()
+**Status:** Resolved
 
 ## Issue 009
-**Column:** Line Item Insurance (USD)
-**Problem:** 287 null values (2.8% of data)
-**Discovery Method:** df.info() output
-**Fix Applied:** TBD after investigation
-**Status:** Pending
+**Column:** PQ First Sent to Client Date, PO Sent to Vendor Date
+**Problem:** Columns contain placeholder text ("Pre-PQ Process", 
+"Date Not Captured") instead of dates in most rows. Sparse real 
+dates use MM/DD/YYYY format, different from other date columns.
+**Discovery Method:** Raw value inspection with .head(10)
+**Decision:** Convert real dates using format="%m/%d/%Y", 
+placeholder text becomes NaT intentionally via errors="coerce". 
+These columns excluded from delivery delay calculations.
+**Status:** Resolved
 
 ## Issue 010
 **Column:** All date columns (5 columns)
