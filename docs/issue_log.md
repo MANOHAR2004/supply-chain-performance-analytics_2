@@ -1,13 +1,22 @@
-# Data Issue Log — Supply Chain Dataset
+# Data Issue Log — Supply Chain Performance & Risk Analytics
+**Dataset:** USAID SCMS Delivery History Dataset
+**Total Issues Found:** 9
+**Total Issues Resolved:** 9
+**Phase:** 1 — EDA & Cleaning
+
+---
 
 ## Issue 001
 **Column:** Freight Cost (USD)
-**Problem:** Stored as object instead of float64. Likely contains non-numeric characters.
+**Problem:** Stored as object instead of float64. Contains mixed 
+value types — numeric costs, reference strings (See DN-XXXX), 
+and text entries (Freight Included in Commodity Cost).
 **Discovery Method:** df.info() output
-**Fix Applied:** Strip non-numeric characters, convert to float64 using (df[
-    pd.to_numeric(df["Freight Cost (USD)"], errors="coerce").isna()
-])
-**Status:** Resolved
+**Fix Applied:** Superseded by Issue 006 — see Issue 006 for 
+complete resolution.
+**Status:** Superseded by Issue 006
+
+---
 
 ## Issue 002
 **Column:** Shipment Mode
@@ -16,168 +25,217 @@
 **Investigation Finding:** All 360 null Shipment Mode rows have 
 Freight_Type = Absorbed and Freight Cost = NaN. Missing mode 
 correlates directly with absorbed freight — structural data gap, 
-not random missingness.
-**Fix Applied:** Filled nulls with "Unknown" using fillna("Unknown").
-Preserves rows for value analysis while excluding from mode-based 
-freight cost comparisons.
+not random missingness. When freight is absorbed into commodity 
+cost, shipment mode was not recorded.
+**Fix Applied:** df["Shipment Mode"] = df["Shipment Mode"].fillna("Unknown")
+Filled with "Unknown" to preserve rows for line item value analysis 
+while correctly excluding from mode-based freight cost comparisons.
+**Verified:** value_counts() shows Unknown: 360 after fix.
 **Status:** Resolved
+
+---
 
 ## Issue 003
 **Column:** Dosage
 **Problem:** 1736 null values (16.8% of data)
-**Discovery Method:** Cross-tabulation with Product Group column
-**Investigation Finding:** Null Dosage values belong exclusively to 
-HRDT (1728 rows) and MRDT (8 rows) product groups. ARV, ANTM, and 
-ACT have zero null Dosage values. Groups do not overlap — this is 
-structural, not random missingness. HRDT/MRDT are diagnostic test 
-kits where Dosage is not an applicable attribute.
-**Fix Applied:** Created Dosage_Applicable flag column using np.where.
-HRDT and MRDT flagged as "Not Applicable". Dosage nulls retained 
-as NaN — they are correct and meaningful, not data entry errors.
+**Discovery Method:** df.isnull().sum() — highest null percentage 
+in dataset, above safe filling threshold.
+**Investigation Finding:** Cross-tabulation with Product Group 
+revealed null Dosage belongs exclusively to HRDT (1728 rows) and 
+MRDT (8 rows) product groups. ARV, ANTM, and ACT have zero null 
+Dosage values. Groups never overlap — this is structural missingness, 
+not random data entry error. HRDT and MRDT are diagnostic test kits 
+where Dosage is not an applicable product attribute.
+**Fix Applied:** Created Dosage_Applicable flag column.
+df["Dosage_Applicable"] = np.where(
+    df["Product Group"].isin(["HRDT", "MRDT"]),
+    "Not Applicable", "Applicable"
+)
+Dosage nulls retained as NaN — they are correct and meaningful.
+Filling with Unknown would be misleading as Dosage simply does 
+not apply to these product types.
+**Verified:** Dosage_Applicable shows Applicable: 8588, 
+Not Applicable: 1736 — matches exactly.
 **Status:** Resolved
+
+---
 
 ## Issue 004
 **Column:** Line Item Insurance (USD)
 **Problem:** 287 null values (2.78% of data)
 **Discovery Method:** df.isnull().sum() and df.info() output
-**Investigation:** describe() output showed min value = 0, confirming 
-zero is a valid recorded value in this column. 54 rows already 
-recorded as 0 insurance. Null values investigated for two possible 
-interpretations — data not recorded vs genuinely zero insurance cost.
-**Decision Logic:** 2.78% is below the 5% bias threshold. Since zero 
-is already a valid value and the percentage is small, filling with 0 
-is conservative and does not meaningfully bias cost analysis.
-**Fix Applied:** df["Line Item Insurance (USD)"].fillna(0, inplace=True)
-**Verified:** isnull().sum() returned 0 after fix confirming all 
-nulls resolved.
+**Investigation Finding:** describe() output showed min value = 0, 
+confirming zero is a valid recorded value in this column. 
+287 nulls investigated for two interpretations — data not recorded 
+vs genuinely zero insurance cost. At 2.78%, below the 5% bias 
+threshold. Zero already exists as a valid value (min = 0).
+**Decision:** Filling with 0 treats missing insurance as no 
+insurance cost recorded — conservative, transparent, documented.
+**Fix Applied:** 
+df["Line Item Insurance (USD)"] = df["Line Item Insurance (USD)"].fillna(0)
+**Verified:** isnull().sum() returned 0 after fix.
 **Status:** Resolved
+
+---
 
 ## Issue 005
-**Column:** All date columns (5 columns)
-**Problem:** Stored as object instead of datetime
-**Discovery Method:** df.info() output
-**Fix Applied:** **Fix Applied:** Converted all 5 date columns using pd.to_datetime() 
-with format="%Y-%m-%d" in a loop. Verified output visually confirms 
-correct 4-digit year parsing.
+**Column:** Scheduled Delivery Date, Delivered to Client Date, 
+Delivery Recorded Date
+**Problem:** Three date columns stored as object instead of 
+datetime64. Initial format assumption "%Y-%m-%d" was incorrect 
+causing 100% NaT conversion failure.
+**Discovery Method:** df.info() showed object dtype. 
+Conversion failure discovered when all 10324 rows returned NaT.
+**Investigation Finding:** Raw value inspection with .head(10) 
+revealed actual format is "2-Jun-06" — day, abbreviated month 
+name, 2-digit year. Correct format string: "%d-%b-%y".
+**Fix Applied:** 
+date_columns = ["Scheduled Delivery Date", 
+                "Delivered to Client Date", 
+                "Delivery Recorded Date"]
+for col in date_columns:
+    df[col] = pd.to_datetime(df[col], 
+                             errors="coerce", 
+                             format="%d-%b-%y")
+**Verified:** All three columns show datetime64[ns] dtype. 
+isnull().sum() = 0 for all three.
 **Status:** Resolved
 
+---
 
 ## Issue 006
 **Column:** Freight Cost (USD)
-**Problem:** Column contained three mixed value types — actual numeric 
-costs, reference strings (See DN-XXXX), and text entries 
-(Freight Included in Commodity Cost). Stored as object due to mixed types.
-**Discovery Method:** df["Freight Cost (USD)"].unique() and visual inspection
-**Fix Applied:** Created Freight_Type flag column using np.where() and 
-regex to classify rows as Absorbed (text) or Separate (numeric). 
-Then converted Freight Cost to numeric using pd.to_numeric(errors='coerce').
-Absorbed rows become NaN in Freight Cost — intentional and documented.
-**Business Note:** 4126 rows (39.9%) have absorbed freight — 
-significant finding for cost analysis. These rows excluded from 
-freight cost calculations but retained for delivery performance analysis.
+**Problem:** Column contained three mixed value types stored 
+as object dtype:
+1. Actual numeric freight costs (e.g. 780.34, 4521.50)
+2. Reference strings (e.g. See DN-4307 ID#83920)
+3. Text entries (Freight Included in Commodity Cost)
+**Discovery Method:** df["Freight Cost (USD)"].tail() inspection 
+after df.info() flagged object dtype.
+**Investigation Finding:** 4126 rows (39.9%) contain non-numeric 
+text. Nearly 40% of shipments have freight absorbed into commodity 
+cost — significant business finding, not just a data quality issue.
+**Fix Applied:** 
+Step 1 — Created Freight_Type flag before conversion:
+df["Freight_Type"] = np.where(
+    df["Freight Cost (USD)"].str.contains(r"[A-Za-z]", na=False),
+    "Absorbed", "Separate"
+)
+Step 2 — Converted to numeric, text becomes NaN intentionally:
+df["Freight Cost (USD)"] = pd.to_numeric(
+    df["Freight Cost (USD)"], errors="coerce"
+)
+**Business Note:** 4126 Absorbed rows excluded from freight cost 
+calculations but retained for delivery performance analysis. 
+Absorbed freight rows correlate with null Shipment Mode (Issue 002).
+**Verified:** Freight_Type shows Separate: 6198, Absorbed: 4126. 
+Null count in Freight Cost = 4126 — matches exactly.
 **Status:** Resolved
+
+---
 
 ## Issue 007
 **Column:** Weight (Kilograms)
-**Problem:** Mixed numeric and text values stored as object dtype.
-Text values include "Weight Captured Separately" and reference strings.
-**Discovery Method:** df["Weight (Kilograms)"].tail() inspection
-**Fix Applied:** Created Weight_Type flag column using np.where() 
-and str.contains() regex. Converted Weight to float64 using 
-pd.to_numeric(errors='coerce'). Text rows become NaN intentionally.
+**Problem:** Same mixed-type pattern as Freight Cost (Issue 006). 
+Contains numeric weights, reference strings (See DN-XXXX), 
+and text entries (Weight Captured Separately). Stored as object.
+**Discovery Method:** df["Weight (Kilograms)"].tail() inspection.
+**Fix Applied:**
+Step 1 — Created Weight_Type flag before conversion:
+df["Weight_Type"] = np.where(
+    df["Weight (Kilograms)"].str.contains(r"[A-Za-z]", na=False),
+    "Captured Separately", "Recorded"
+)
+Step 2 — Converted to numeric, text becomes NaN intentionally:
+df["Weight (Kilograms)"] = pd.to_numeric(
+    df["Weight (Kilograms)"], errors="coerce"
+)
+**Verified:** Weight_Type shows Recorded: 6372, 
+Captured Separately: 3952. Null count in Weight = 3952 — 
+matches exactly.
 **Status:** Resolved
 
+---
+
 ## Issue 008
-**Column:** Entire dataset
-**Problem:** CSV file uses latin1 encoding, not default UTF-8. 
-Causes UnicodeDecodeError without explicit encoding parameter.
-**Fix Applied:** Added encoding="latin1" in pd.read_csv()
+**Column:** Entire Dataset
+**Problem:** CSV file uses latin1 encoding. Loading with default 
+UTF-8 encoding causes UnicodeDecodeError on special characters 
+in country names and vendor descriptions.
+**Discovery Method:** FileNotFoundError investigation revealed 
+encoding mismatch when loading file.
+**Fix Applied:** Added encoding="latin1" parameter to pd.read_csv():
+df = pd.read_csv(
+    "../data/raw_data/SCMS_Delivery_History_Dataset_20150929.csv",
+    encoding="latin1"
+)
 **Status:** Resolved
+
+---
 
 ## Issue 009
 **Column:** PQ First Sent to Client Date, PO Sent to Vendor Date
-**Problem:** Columns contain placeholder text ("Pre-PQ Process", 
-"Date Not Captured") instead of dates in most rows. Sparse real 
-dates use MM/DD/YYYY format, different from other date columns.
-**Discovery Method:** Raw value inspection with .head(10)
-**Decision:** Convert real dates using format="%m/%d/%Y", 
-placeholder text becomes NaT intentionally via errors="coerce". 
+**Problem:** Columns contain placeholder text instead of dates 
+in most rows. PQ First Sent contains "Pre-PQ Process" and 
+PO Sent to Vendor contains "Date Not Captured". Sparse real 
+dates use MM/DD/YYYY format — different from other date columns.
+**Discovery Method:** Raw value inspection with .head(10) after 
+100% NaT conversion failure when using "%d-%b-%y" format.
+**Investigation Finding:** These columns represent process stages 
+that were incomplete or not tracked for most shipments. Real 
+dates that exist use format "11/13/2006" = "%m/%d/%Y".
+**Fix Applied:**
+mixed_date_columns = ["PQ First Sent to Client Date",
+                      "PO Sent to Vendor Date"]
+for col in mixed_date_columns:
+    df[col] = pd.to_datetime(df[col], 
+                             errors="coerce", 
+                             format="%m/%d/%Y")
+Placeholder text becomes NaT intentionally via errors="coerce".
 These columns excluded from delivery delay calculations.
+**Verified:** PQ First Sent: 2681 non-null dates recovered.
+PO Sent to Vendor: 4592 non-null dates recovered.
 **Status:** Resolved
 
-## Issue 010
-**Column:** All date columns (5 columns)
-**Problem:** Stored as object instead of datetime
-**Discovery Method:** df.info() output
-**Fix Applied:** Convert using pd.to_datetime()
-**Status:** Pending
+---
 
-## Issue 011
-**Column:** Freight Cost (USD)
-**Problem:** Stored as object instead of float64. Likely contains non-numeric characters.
-**Discovery Method:** df.info() output
-**Fix Applied:** Strip non-numeric characters, convert to float64
-**Status:** Pending
+## Feature Engineering Log
 
-## Issue 012
-**Column:** Shipment Mode
-**Problem:** 360 null values (3.5% of data)
-**Discovery Method:** df.info() output
-**Fix Applied:** TBD after investigation
-**Status:** Pending
+### Feature 001 — Delivery_Delay_Days
+**Formula:** Delivered to Client Date − Scheduled Delivery Date
+**Type:** Integer (days)
+**Business Use:** Core KPI — measures actual delivery performance 
+against schedule. Positive = late, Negative = early, Zero = exact.
+**Code:**
+df["Delivery_Delay_Days"] = (
+    df["Delivered to Client Date"] - df["Scheduled Delivery Date"]
+).dt.days
 
-## Issue 013
-**Column:** Dosage
-**Problem:** 1736 null values (16.8% of data)
-**Discovery Method:** df.info() output
-**Fix Applied:** TBD after investigation
-**Status:** Pending
+### Feature 002 — On_Time_Delivery
+**Formula:** Delivery_Delay_Days <= 2 → "On Time" else "Late"
+**Type:** Categorical (On Time / Late)
+**Business Use:** Binary KPI for dashboard headline metric. 
+2-day tolerance window accounts for last-mile variability.
+**Finding:** 9278 On Time (89.9%), 1046 Late (10.1%)
+**Code:**
+df["On_Time_Delivery"] = np.where(
+    df["Delivery_Delay_Days"] <= 2, "On Time", "Late"
+)
 
-## Issue 014
-**Column:** Line Item Insurance (USD)
-**Problem:** 287 null values (2.8% of data)
-**Discovery Method:** df.info() output
-**Fix Applied:** TBD after investigation
-**Status:** Pending
+### Feature 003 — Delivery_Status
+**Formula:** Three-way classification — Early / On Time / Late
+**Type:** Categorical (Early / On Time / Late)
+**Business Use:** Granular delivery performance segmentation. 
+Early deliveries indicate over-expediting — a cost concern. 
+Late deliveries indicate supplier or logistics risk.
+**Finding:** Early: 2814 (27.3%), On Time: 6464 (62.6%), 
+Late: 1046 (10.1%)
+**Code:**
+df["Delivery_Status"] = np.where(
+    df["Delivery_Delay_Days"] < 0, "Early",
+    np.where(df["Delivery_Delay_Days"] <= 2, "On Time", "Late")
+)
 
-## Issue 015
-**Column:** All date columns (5 columns)
-**Problem:** Stored as object instead of datetime
-**Discovery Method:** df.info() output
-**Fix Applied:** Convert using pd.to_datetime()
-**Status:** Pending
-
-## Issue 016
-**Column:** Freight Cost (USD)
-**Problem:** Stored as object instead of float64. Likely contains non-numeric characters.
-**Discovery Method:** df.info() output
-**Fix Applied:** Strip non-numeric characters, convert to float64
-**Status:** Pending
-
-## Issue 002
-**Column:** Shipment Mode
-**Problem:** 360 null values (3.5% of data)
-**Discovery Method:** df.info() output
-**Fix Applied:** TBD after investigation
-**Status:** Pending
-
-## Issue 003
-**Column:** Dosage
-**Problem:** 1736 null values (16.8% of data)
-**Discovery Method:** df.info() output
-**Fix Applied:** TBD after investigation
-**Status:** Pending
-
-## Issue 004
-**Column:** Line Item Insurance (USD)
-**Problem:** 287 null values (2.8% of data)
-**Discovery Method:** df.info() output
-**Fix Applied:** TBD after investigation
-**Status:** Pending
-
-## Issue 005
-**Column:** All date columns (5 columns)
-**Problem:** Stored as object instead of datetime
-**Discovery Method:** df.info() output
-**Fix Applied:** Convert using pd.to_datetime()
-**Status:** Pending
+---
+*Phase 1 completed — cleaned data exported to data/processed/scms_cleaned.csv*
+*Final shape: 10324 rows × 38 columns*
