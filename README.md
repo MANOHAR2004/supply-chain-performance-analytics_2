@@ -71,6 +71,8 @@ supply-chain-performance-analytics/
 │ └── issue_log.md # Live data quality issue tracker
 │
 └── README.md
+![Project structure](<img width="782" height="675" alt="image" src="https://github.com/user-attachments/assets/67c72136-e41b-4d0d-ba27-f7c202262315" />
+)
 ---
 
 ## Tech Stack
@@ -84,8 +86,7 @@ supply-chain-performance-analytics/
 | MySQL 8.0 | Schema design and analytical queries |
 | Power BI | Interactive dashboard and DAX measures |
 | Git / GitHub | Version control and portfolio hosting |
-![Project structure](<img width="782" height="675" alt="image" src="https://github.com/user-attachments/assets/67c72136-e41b-4d0d-ba27-f7c202262315" />
-)
+
 ---
 
 ## Phase 1 — EDA & Data Cleaning ✓ Complete
