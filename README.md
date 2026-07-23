@@ -44,7 +44,8 @@ diagnostic test kits (HRDT/MRDT), antimalarials (ANTM/ACT)
 (Air, Truck, Air Charter, Ocean), and product categories
 
 ---
-
+![Project structure](<img width="782" height="675" alt="image" src="https://github.com/user-attachments/assets/67c72136-e41b-4d0d-ba27-f7c202262315" />
+)
 ## Project Structure
 supply-chain-performance-analytics/
 │
@@ -71,8 +72,7 @@ supply-chain-performance-analytics/
 │ └── issue_log.md # Live data quality issue tracker
 │
 └── README.md
-![Project structure](<img width="782" height="675" alt="image" src="https://github.com/user-attachments/assets/67c72136-e41b-4d0d-ba27-f7c202262315" />
-)
+
 ---
 
 ## Tech Stack
