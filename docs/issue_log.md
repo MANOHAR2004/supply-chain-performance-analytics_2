@@ -169,7 +169,7 @@ df = pd.read_csv(
     "../data/raw_data/SCMS_Delivery_History_Dataset_20150929.csv",
     encoding="latin1"
 )
-**Status:** Resolved
+**Status:** Resolved and completed 
 
 ---
 
