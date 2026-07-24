@@ -1,0 +1,46 @@
+CREATE DATABASE supply_chain_db;
+USE supply_chain_db;
+
+DROP TABLE IF EXISTS scms_shipments;
+
+CREATE TABLE scms_shipments (
+    ID                          INT PRIMARY KEY,
+    Project_Code                VARCHAR(50),
+    PQ_Number                   VARCHAR(50),
+    PO_SO_Number                VARCHAR(50),
+    ASN_DN_Number               VARCHAR(50),
+    Country                     VARCHAR(100),
+    Managed_By                  VARCHAR(100),
+    Fulfill_Via                 VARCHAR(100),
+    Vendor_INCO_Term            VARCHAR(50),
+    Shipment_Mode               VARCHAR(50),
+    PQ_First_Sent_to_Client     VARCHAR(50),
+    PO_Sent_to_Vendor           VARCHAR(50),
+    Scheduled_Delivery_Date     VARCHAR(20),
+    Delivered_to_Client_Date    VARCHAR(20),
+    Delivery_Recorded_Date      VARCHAR(20),
+    Product_Group               VARCHAR(50),
+    Sub_Classification          VARCHAR(100),
+    Vendor                      VARCHAR(200),
+    Item_Description            VARCHAR(500),
+    Molecule_Test_Type          VARCHAR(200),
+    Brand                       VARCHAR(200),
+    Dosage                      VARCHAR(100),
+    Dosage_Form                 VARCHAR(100),
+    Unit_of_Measure_Per_Pack    VARCHAR(50),
+    Line_Item_Quantity          VARCHAR(50),
+    Line_Item_Value             VARCHAR(50),
+    Pack_Price                  VARCHAR(50),
+    Unit_Price                  VARCHAR(50),
+    Manufacturing_Site          VARCHAR(200),
+    First_Line_Designation      VARCHAR(50),
+    Weight_Kilograms            VARCHAR(50),
+    Freight_Cost_USD            VARCHAR(50),
+    Line_Item_Insurance_USD     VARCHAR(50),
+    Freight_Type                VARCHAR(30),
+    Weight_Type                 VARCHAR(50),
+    Dosage_Applicable           VARCHAR(30),
+    Delivery_Delay_Days         VARCHAR(50),
+    On_Time_Delivery            VARCHAR(20),
+    Delivery_Status             VARCHAR(20)
+);
