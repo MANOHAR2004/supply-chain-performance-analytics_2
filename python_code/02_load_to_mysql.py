@@ -1,11 +1,12 @@
 import mysql.connector
 import pandas as pd
+import numpy as np
 
 # Connect
 conn = mysql.connector.connect(
     host="localhost",
     user="root",
-    password="Mano#2002@",
+    password="Your_mysql_password",  # type you mysql password
     database="supply_chain_db"
 )
 cursor = conn.cursor()
@@ -13,24 +14,29 @@ print("Connected successfully")
 
 # Load cleaned data
 df = pd.read_csv(
-    "../data/processed/scms_cleaned.csv",
+    "../data/processed_data/scms_cleaned.csv",
     encoding="utf-8"
 )
-df = df.where(pd.notna(df), None)
+
+# Replace ALL variations of null with None
+df = df.replace({np.nan: None, "nan": None, "NaN": None, "None": None})
 print("Rows to insert:", len(df))
 
-# Fixed INSERT — 38 placeholders matching schema column order
+# INSERT query — 38 placeholders
 insert_query = """
     INSERT INTO scms_shipments VALUES (
         %s, %s, %s, %s, %s, %s, %s, %s, %s, %s,
         %s, %s, %s, %s, %s, %s, %s, %s, %s, %s,
         %s, %s, %s, %s, %s, %s, %s, %s, %s, %s,
-        %s, %s, %s, %s, %s, %s, %s, %s
+        %s, %s, %s, %s, %s, %s, %s, %s,%s
     )
 """
 
-# Convert to list of tuples and insert
-rows = [tuple(row) for row in df.values]
+# Convert to list of tuples
+rows = [tuple(row) for row in df.itertuples(index=False, name=None)]
+print("Data prepared. Inserting...")
+
+# Insert
 cursor.executemany(insert_query, rows)
 conn.commit()
 print(f"Successfully inserted {cursor.rowcount} rows")
