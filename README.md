@@ -204,4 +204,19 @@ Aspiring Data Analyst | Python · SQL · Power BI
 ---
 
 *Project Status: Phase 1 Complete — Phase 2 In Progress*
+## Phase 2 — SQL Analysis 🔄 In Progress
+
+**Completed:**
+- Database schema designed with correct data types
+- Python loading script built using mysql-connector-python
+
+![screenshot](<img width="745" height="715" alt="image" src="https://github.com/user-attachments/assets/783338d8-4040-45fa-9375-d78ca00d0600" />
+
+)
+- 10,324 rows loaded and verified in MySQL
+- All data type conversions applied via ALTER TABLE
+
+**In Progress:**
+- 03_analysis.sql — 35+ analytical queries
+- 04_views.sql — views for Power BI connection
 
