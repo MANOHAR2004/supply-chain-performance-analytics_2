@@ -210,7 +210,8 @@ Aspiring Data Analyst | Python · SQL · Power BI
 - Database schema designed with correct data types
 - Python loading script built using mysql-connector-python
 
-![screenshot](<img width="745" height="715" alt="image" src="https://github.com/user-attachments/assets/6ef9dc3f-fe73-4120-8f8f-92ef1bccbe8e" />
+![screenshot](<img width="745" height="715" alt="image" src="https://github.com/user-attachments/assets/783338d8-4040-45fa-9375-d78ca00d0600" />
+
 )
 - 10,324 rows loaded and verified in MySQL
 - All data type conversions applied via ALTER TABLE
