@@ -120,6 +120,123 @@ WHERE Shipment_Mode != 'Unknown' AND Freight_Type = 'Separate'
 
 GROUP BY shipment_mode
 ORDER BY Average_freight_cost DESC;
+
+
+-- 5) Business Question: Which vendors are both expensive AND unreliable — high freight costs combined with high late delivery rates? And which vendors are our best performers on both dimensions?
+-- Query 5 — Vendor Comprehensive Performance Scorecard
     
+
+WITH Vendor_specification AS (
+	SELECT Vendor,
+	count(*) as total_shipments,
+    ROUND(AVG(Freight_Cost_USD),2) AS Average_freight_cost,
+    ROUND(AVG(Delivery_Delay_Days),2) AS Average_delay_days,
+    ROUND(AVG(Line_Item_Value),2) AS Average_line_item_value,
+    sum(case 
+			when On_Time_Delivery = 'Late' Then 1 
+			Else 0 
+		END) AS Late_shipments
+    FROM scms_shipments
+    WHERE Shipment_Mode != 'Unknown' AND Freight_Type = 'Separate' 
+    GROUP BY Vendor
+    HAVING COUNT(*) > 20
+    
+),
+
+Vendor_metrics AS (
+	SELECT Vendor,
+    total_shipments,
+    Average_freight_cost,
+    Average_delay_days,
+    Average_line_item_value,
+    Late_shipments,
+    ROUND(Average_freight_cost * 100.0 / Average_line_item_value ,2) AS Freight_Cost_percentage,
+    ROUND(Late_shipments * 100.0 / total_shipments, 2) AS Late_shipments_percentage
+    FROM Vendor_specification
+),
+
+Vendor_ranking AS (
+	SELECT *,
+    NTILE (4) OVER ( ORDER BY Late_shipments_percentage DESC) AS Risk_assessment,
+    DENSE_RANK() OVER (order by Late_shipments_percentage desc ) as Late_Vendor_ranking
+    FROM Vendor_metrics
+    
+    
+)
+
+SELECT Vendor,
+	total_shipments,
+    Average_freight_cost,
+    Freight_Cost_percentage,
+    Late_shipments_percentage,
+    Average_line_item_value,
+    Average_delay_days,
+    CASE 
+		WHEN Risk_assessment = 1 THEN 'High Risk'
+        WHEN Risk_assessment = 2 THEN 'Medium Risk'
+        WHEN Risk_assessment = 3 THEN 'Low Risk'
+        ELSE 'Reliable'
+	END Vendor_performance_tier,
+    Late_Vendor_ranking
+    FROM Vendor_ranking
+    ORDER BY Late_shipments_percentage DESC
+
+;
+
+
+-- 6) Business Question: Does vendor performance vary by country — are certain vendors reliable in some countries but consistently late in others? 
+-- Query 6 — Vendor Performance by Country using PARTITION BY
+
+SELECT * from scms_shipments
+limit 10;
+
+WITH Vendor_country_summary AS (
+	SELECT Country,
+    Vendor,
+    count(*) as total_shipments,
+    ROUND(AVG(Delivery_Delay_Days),2) AS Average_delay_days,
+    sum(case 
+			when On_Time_Delivery = 'Late' Then 1 
+			Else 0 
+		END) AS Late_shipments
+    FROM scms_shipments
+    WHERE Vendor != 'Unknown'
+    AND Country != 'Unknown'
+	group by Vendor, Country 
+    HAVING COUNT(*) > 15
+    
+
+),
+
+Vendor_Country_metrix AS (
+	SELECT Country,
+    Vendor,
+    total_shipments,
+    Late_shipments,
+    Average_delay_days,
+    ROUND(Late_shipments * 100.0 / total_shipments, 2) AS Late_shipments_percentage
+    FROM Vendor_country_summary
+),
+
+Vendor_country_rank AS (
+	SELECT *,
+    DENSE_RANK() OVER (PARTITION BY Country ORDER BY Late_shipments_percentage desc ) AS Vendor_Country_rank
+    FROM Vendor_Country_metrix
+)
+
+
+SELECT Country,
+		Vendor,
+		total_shipments,
+		Average_delay_days,
+		Late_shipments_percentage,
+		Late_shipments,
+		Vendor_country_rank
+    FROM Vendor_country_rank
+	WHERE vendor_country_rank = 1
+    ORDER BY Late_shipments_percentage DESC;
+    
+
+
 
 

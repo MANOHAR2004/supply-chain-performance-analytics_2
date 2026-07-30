@@ -171,10 +171,18 @@ On_Time_Delivery, Delivery_Delay_Days, Freight_Type
 **SQL Reference:** 03_analysis.sql — Query 5
 
 **Key Finding:**
-[Update after query is written and run]
+- High Risk vendors (Tier 1): BIO-RAD (16% late, 15% freight ratio),
+  SCMS from RDC (15.76% late — dominant vendor, highest volume risk)
+- Cost outlier: Shanghai Kehua 32.54% freight ratio despite Medium Risk
+  delivery performance — cost risk independent of delivery risk
+- Reliable tier: Bristol-Myers Squibb, Merck Sharp & Dohme,
+  Hoffmann-La Roche all at 0% late rate — procurement benchmarks
 
 **Recommendation:**
-[Update after findings are documented]
+Immediate contract review for SCMS from RDC — handles largest
+shipment volume in High Risk tier. Separate cost audit for
+Shanghai Kehua — freight cost ratio 4x the mode average.
+Use Reliable tier vendors as benchmark for SLA standards.
 
 ---
 
@@ -186,8 +194,20 @@ Does vendor performance vary significantly by country,
 or do the same vendors underperform everywhere?
 
 **SQL Reference:** 03_analysis.sql — Query 6
-**Key Finding:** [Pending]
-**Recommendation:** [Pending]
+**Key Finding:**
+SCMS from RDC is worst vendor in 17+ countries simultaneously.
+Country-specific risks:
+- Burundi: SCMS 38.89% late (worst combination)
+- Congo DRC: SCMS 38.03% late (+17.46 avg delay)
+- South Africa: CIPLA 36.07% late despite strong country average
+- Nigeria: Orgenics 27.94% late despite strong country average
+
+**Recommendation:**
+SCMS from RDC requires global contract review — not country
+specific intervention. CIPLA and Orgenics need country-specific
+performance improvement plans in South Africa and Nigeria
+respectively where they are single-handedly dragging down
+otherwise reliable corridors.
 
 ---
 
