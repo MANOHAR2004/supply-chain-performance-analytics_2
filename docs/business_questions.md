@@ -217,8 +217,28 @@ Are underperforming vendors improving or deteriorating
 over time?
 
 **SQL Reference:** 03_analysis.sql — Query 7
-**Key Finding:** [Pending]
-**Recommendation:** [Pending]
+**Key Finding BQ-07:**
+SCMS from RDC shows cyclical deterioration pattern —
+not random variation but structural performance failure:
+- 2007-2009: Reliable (under 4% late)
+- 2010-2011: Crisis (peaked 34.10% in 2011)
+- 2012: False recovery (9.00%)
+- 2013-2014: Relapse (back to 32.21%)
+- 2015: Partial improvement (24.53%)
+
+Aurobindo Pharma shows genuine improvement trajectory —
+25.69% peak in 2011 to 0% by 2014. Benchmark for
+vendor recovery management.
+
+Orgenics shows high volatility with no trend —
+37.50% to 1.27% to 18.98% — unpredictable risk.
+
+**Recommendation:**
+SCMS contract renewal decisions should never be based
+on single-year performance. Rolling 3-year average
+required to distinguish genuine improvement from
+temporary recovery. Aurobindo model should be studied
+for vendor performance improvement programme design.
 
 ---
 
@@ -228,8 +248,28 @@ Which vendors consistently deliver later than the
 overall average delay across all vendors?
 
 **SQL Reference:** 03_analysis.sql — Query 8
-**Key Finding:** [Pending]
-**Recommendation:** [Pending]
+**Key Finding:**
+Overall average delivery delay is -6.02 days across all vendors
+meaning the fleet delivers early on average. Vendors above this
+threshold are not necessarily late — they may simply be less early.
+
+Genuine underperformers (positive avg delay + high late rate):
+- CIPLA LIMITED: +4.78 avg delay, 12.57% late rate
+- Aurobindo Pharma: +4.41 avg delay, 12.13% late rate
+- Orgenics Ltd: +0.84 avg delay, 10.21% late rate
+
+False positives in this analysis (above average delay but 0% late):
+- Bristol-Myers Squibb: 0.00 avg delay, 0% late
+- Pharmacy Direct: 0.00 avg delay, 0% late
+These vendors deliver exactly on schedule — above the early-delivery
+average but not actually underperforming.
+
+**Recommendation:**
+Combine this query with late percentage filter (>5%) to isolate
+genuine underperformers from vendors who simply don't over-expedite FOR  this you can add (AND ROUND(
+    SUM(CASE WHEN On_Time_Delivery = 'Late' THEN 1 ELSE 0 END) * 100.0 / COUNT(*), 
+    2
+) > 5) this filter in having clause in query 8 for additional understanding about vendor perfomance.
 
 ---
 
@@ -241,8 +281,25 @@ Which product groups have the worst delivery performance
 and highest freight cost burden?
 
 **SQL Reference:** 03_analysis.sql — Query 9
-**Key Finding:** [Pending]
-**Recommendation:** [Pending]
+**Key Finding:**
+ARV medicines (largest group, 4,615 shipments) have worst
+on-time delivery rate at 87.71% — 12.29% of critical
+HIV medicines arrive late. This is the highest-risk
+product category by volume and clinical importance.
+
+HRDT diagnostic kits perform better on delivery (94.46%)
+but carry higher freight cost burden (8.94% vs ARV 5.15%).
+
+ANTM antimalarials show extreme freight cost inefficiency
+at 61.94% ratio — though small volume (19 shipments)
+limits statistical significance.
+
+**Recommendation:**
+Prioritise ARV supply chain intervention given clinical
+criticality. Even 1% improvement in ARV on-time rate
+represents 46 additional on-time deliveries of HIV medicines.
+Investigate ANTM freight cost — 61.94% ratio suggests
+either very small/lightweight shipments or wrong mode selection.
 
 ---
 

@@ -224,7 +224,6 @@ Vendor_country_rank AS (
     FROM Vendor_Country_metrix
 )
 
-
 SELECT Country,
 		Vendor,
 		total_shipments,
@@ -236,7 +235,156 @@ SELECT Country,
 	WHERE vendor_country_rank = 1
     ORDER BY Late_shipments_percentage DESC;
     
+    -- 7)Business question -Are our worst vendors getting better or worse over time?
+    -- Query 7 — Vendor Performance Trend Over Time Using LAG
+    
+WITH Vendor_Year_Base AS (
+    SELECT 
+        Vendor,
+        YEAR(Scheduled_Delivery_Date) AS Year,
+        COUNT(*) AS total_shipments,
+        sum(case 
+			when On_Time_Delivery = 'Late' Then 1 
+			Else 0 
+		END) AS Late_shipments
+    FROM scms_shipments
+    WHERE Shipment_Mode != 'Unknown'
+    GROUP BY Vendor, YEAR(Scheduled_Delivery_Date)
+),
 
+Vendor_Year_Metrics AS (
+    SELECT 
+        Vendor,
+        Year,
+        total_shipments,
+        Late_shipments,
+        ROUND(Late_shipments * 100.0 / total_shipments, 2) AS Late_percentage
+    FROM Vendor_Year_Base
+),
+
+Vendor_Year_Trend AS (
+    SELECT 
+        Vendor,
+        Year,
+        total_shipments,
+        Late_percentage,
+        LAG(Late_percentage, 1) OVER (
+            PARTITION BY Vendor
+            ORDER BY Year
+        ) AS Prev_Year_Late_percentage,
+        ROUND(
+            Late_percentage -LAG(Late_percentage, 1) OVER (
+            PARTITION BY Vendor
+            ORDER BY Year
+        ), 2) AS YoY_change
+    FROM Vendor_Year_Metrics
+)
+
+SELECT 
+    Vendor,
+    Year,
+    total_shipments,
+    Late_percentage,
+    Prev_Year_Late_percentage,
+    YoY_change
+FROM Vendor_Year_Trend
+WHERE Vendor IN (
+    SELECT Vendor FROM Vendor_Year_Base 
+    GROUP BY Vendor
+    HAVING SUM(total_shipments) > 200
+)
+ORDER BY Vendor, Year;
+
+
+-- Business Question: Which vendors consistently deliver later than the overall average delay across all vendors? I want to identify chronic underperformers, not just one-time failures.
+-- Query 8 — Correlated Subquery
+
+SELECT Vendor,
+	COUNT(*) AS total_shipments,
+    
+    ROUND(AVG(Delivery_Delay_Days),2) AS Vendor_avg_delay_days,
+     ( SELECT round(avg(Delivery_Delay_Days),2) FROM scms_shipments) as overall_avg_delays,
+    sum(case 
+			when On_Time_Delivery = 'Late' Then 1 
+			Else 0 
+		END) AS Late_shipments,
+    ROUND(
+        SUM(CASE WHEN On_Time_Delivery = 'Late' THEN 1 ELSE 0 END) * 100.0 / COUNT(*), 
+        2
+    ) AS Late_shipments_percentage,
+	ROUND(AVG(Delivery_Delay_Days) - ( select AVG(Delivery_Delay_Days)  FROM scms_shipments),2) AS diff_between_overall_avg_vendor_avg
+    FROM scms_shipments
+    GROUP BY Vendor
+    HAVING COUNT(*) > 50  and AVG(Delivery_Delay_Days) > (
+    SELECT AVG(Delivery_Delay_Days) FROM scms_shipments)
+    
+    ORDER BY Vendor_avg_delay_days desc;
+    
+-- Business Question: Which product groups have the worst delivery performance and highest freight cost burden?
+-- Query 9 — Product Group Performance
+
+SELECT Product_Group,
+	COUNT(*) as total_shipments,
+    ROUND(AVG(Delivery_Delay_Days),2) as avg_delay_day,
+    ROUND(AVG(Freight_Cost_USD),2) as avg_freight_cost,
+    ROUND(AVG(Line_Item_Value),2) as avg_line_item_value,
+    
+    sum(case 
+			when On_Time_Delivery = 'On Time' Then 1 
+			Else 0 
+		END) AS On_time_delivery,
+	ROUND(sum(case 
+			when On_Time_Delivery = 'On Time' Then 1 
+			Else 0 
+		END) * 100.0/ COUNT(*),2) AS On_time_delivery_rate,
+    ROUND(SUM(Freight_Cost_USD) * 100.0/ SUM(Line_Item_Value),2) AS  freight_cost_percentage
+    
+	FROM scms_shipments
+    WHERE Shipment_Mode <> 'Unknown'
+  AND Freight_Type = 'Separate'
+GROUP BY Product_Group
+ORDER BY On_time_delivery_rate asc;
+    
+-- Business Question: Which countries present the highest combined supply chain risk? I need a single score combining delivery delay, late shipment rate, and freight cost burden so I can prioritise where to focus intervention
+-- Query 10 — Country Risk Scorecard
+
+
+WITH raw_metrix as (
+	SELECT Country,
+    count(*) as total_shipments,
+    ROUND(AVG(Delivery_Delay_Days),2) as avg_delay_day,
+        ROUND(
+        SUM(CASE WHEN On_Time_Delivery = 'Late' THEN 1 ELSE 0 END) * 100.0 / COUNT(*), 
+        2
+    ) AS Late_shipments_percentage,
+	ROUND(AVG(Freight_Cost_USD),2) as avg_freight_cost,
+    ROUND(SUM(Freight_Cost_USD) * 100.0/ SUM(Line_Item_Value),2) AS  freight_cost_percentage
+
+FROM scms_shipments
+WHERE Freight_Type = 'Separate'
+AND Shipment_Mode != 'Unknown'
+group by Country
+HAVING total_shipments > 50
+
+),
+
+composit_risk_rank as ( 
+	SELECT *, 
+    round((Late_shipments_percentage * 0.5) + (avg_delay_day * 0.3) + (freight_cost_percentage * 0.2),2) as composite_risk_score
+FROM raw_metrix) 
+
+  
+Select Country,
+	total_shipments,
+    avg_delay_day,
+    avg_freight_cost,
+    Late_shipments_percentage,
+    freight_cost_percentage,
+    composite_risk_score,
+    RANK() OVER( ORDER BY composite_risk_score DESC ) AS Risk_Rank
+    
+from composit_risk_rank
+;
 
 
 
