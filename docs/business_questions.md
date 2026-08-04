@@ -309,8 +309,27 @@ Which countries present the highest combined supply
 chain risk across delay, late rate, and freight cost?
 
 **SQL Reference:** 03_analysis.sql — Query 10
-**Key Finding:** [Pending]
-**Recommendation:** [Pending]
+**Key Finding:**
+Methodology note: Delivery metrics (delay, late rate) calculated
+on ALL shipments. Freight cost metrics on Separate freight only.
+Using single filter for both metrics creates selection bias —
+validated through South Africa case where Separate-only filter
+changed rank from 22 to 2 incorrectly.
+
+Final composite risk ranking:
+1. Congo DRC — score 20.87 (only positive avg delay country)
+2. Burundi — score 14.49 (highest late rate 28.57%)
+3. South Sudan — score 13.22 (highest freight cost ratio 35.70%)
+22. South Africa — score 0.82 (benchmark corridor)
+
+**Recommendation:**
+Always separate delivery performance filters from cost filters
+in multi-metric analysis. Single filter applied to composite
+metrics creates misleading country risk profiles.
+Top 3 countries require different interventions:
+- Congo DRC: Logistics corridor improvement
+- Burundi: Vendor reliability (SCMS from RDC dominant)
+- South Sudan: Mode optimisation to reduce freight ratio
 
 ---
 

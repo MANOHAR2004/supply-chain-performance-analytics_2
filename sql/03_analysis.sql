@@ -349,42 +349,56 @@ ORDER BY On_time_delivery_rate asc;
 -- Query 10 — Country Risk Scorecard
 
 
-WITH raw_metrix as (
-	SELECT Country,
-    count(*) as total_shipments,
-    ROUND(AVG(Delivery_Delay_Days),2) as avg_delay_day,
+WITH delivery_metrics AS (
+    SELECT Country,
+        COUNT(*) AS total_shipments,
+        ROUND(AVG(Delivery_Delay_Days), 2) AS avg_delay_day,
         ROUND(
-        SUM(CASE WHEN On_Time_Delivery = 'Late' THEN 1 ELSE 0 END) * 100.0 / COUNT(*), 
-        2
-    ) AS Late_shipments_percentage,
-	ROUND(AVG(Freight_Cost_USD),2) as avg_freight_cost,
-    ROUND(SUM(Freight_Cost_USD) * 100.0/ SUM(Line_Item_Value),2) AS  freight_cost_percentage
-
-FROM scms_shipments
-WHERE Freight_Type = 'Separate'
-AND Shipment_Mode != 'Unknown'
-group by Country
-HAVING total_shipments > 50
-
+            SUM(CASE WHEN On_Time_Delivery = 'Late' THEN 1 ELSE 0 END) 
+            * 100.0 / COUNT(*), 2
+        ) AS Late_shipments_percentage
+    FROM scms_shipments
+    WHERE Shipment_Mode != 'Unknown'
+    GROUP BY Country
+    HAVING COUNT(*) > 50
 ),
-
-composit_risk_rank as ( 
-	SELECT *, 
-    round((Late_shipments_percentage * 0.5) + (avg_delay_day * 0.3) + (freight_cost_percentage * 0.2),2) as composite_risk_score
-FROM raw_metrix) 
-
-  
-Select Country,
-	total_shipments,
+cost_metrics AS (
+    SELECT Country,
+        ROUND(AVG(Freight_Cost_USD), 2) AS avg_freight_cost,
+        ROUND(
+            SUM(Freight_Cost_USD) * 100.0 / SUM(Line_Item_Value), 2
+        ) AS freight_cost_percentage
+    FROM scms_shipments
+    WHERE Freight_Type = 'Separate'
+    AND Shipment_Mode != 'Unknown'
+    GROUP BY Country
+),
+composite_risk AS (
+    SELECT 
+        d.Country,
+        d.total_shipments,
+        d.avg_delay_day,
+        d.Late_shipments_percentage,
+        c.avg_freight_cost,
+        c.freight_cost_percentage,
+        ROUND(
+            (d.Late_shipments_percentage * 0.5) + 
+            (d.avg_delay_day * 0.3) + 
+            (COALESCE(c.freight_cost_percentage, 0) * 0.2)
+        , 2) AS composite_risk_score
+    FROM delivery_metrics d
+    LEFT JOIN cost_metrics c ON d.Country = c.Country
+)
+SELECT 
+    Country,
+    total_shipments,
     avg_delay_day,
     avg_freight_cost,
     Late_shipments_percentage,
     freight_cost_percentage,
     composite_risk_score,
-    RANK() OVER( ORDER BY composite_risk_score DESC ) AS Risk_Rank
-    
-from composit_risk_rank
-;
-
+    RANK() OVER (ORDER BY composite_risk_score DESC) AS Risk_Rank
+FROM composite_risk
+ORDER BY Risk_Rank;
 
 
