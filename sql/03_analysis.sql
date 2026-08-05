@@ -296,7 +296,7 @@ WHERE Vendor IN (
 ORDER BY Vendor, Year;
 
 
--- Business Question: Which vendors consistently deliver later than the overall average delay across all vendors? I want to identify chronic underperformers, not just one-time failures.
+-- 8)Business Question : Which vendors consistently deliver later than the overall average delay across all vendors? I want to identify chronic underperformers, not just one-time failures.
 -- Query 8 — Correlated Subquery
 
 SELECT Vendor,
@@ -320,7 +320,7 @@ SELECT Vendor,
     
     ORDER BY Vendor_avg_delay_days desc;
     
--- Business Question: Which product groups have the worst delivery performance and highest freight cost burden?
+-- 9)Business Question: Which product groups have the worst delivery performance and highest freight cost burden?
 -- Query 9 — Product Group Performance
 
 SELECT Product_Group,
@@ -345,7 +345,7 @@ SELECT Product_Group,
 GROUP BY Product_Group
 ORDER BY On_time_delivery_rate asc;
     
--- Business Question: Which countries present the highest combined supply chain risk? I need a single score combining delivery delay, late shipment rate, and freight cost burden so I can prioritise where to focus intervention
+-- 10)Business Question: Which countries present the highest combined supply chain risk? I need a single score combining delivery delay, late shipment rate, and freight cost burden so I can prioritise where to focus intervention
 -- Query 10 — Country Risk Scorecard
 
 
@@ -402,3 +402,143 @@ FROM composite_risk
 ORDER BY Risk_Rank;
 
 
+-- 11)Business Question: Which countries receive the most procurement value and how has that changed year over year?
+-- Query 11 — Country Procurement Value and Year Over Year Change
+
+WITH Country_Year_Base AS (
+    SELECT 
+        Country,
+        YEAR(Scheduled_Delivery_Date) AS year,
+        COUNT(*) AS total_shipments,
+        ROUND(SUM(Line_Item_Value), 2) AS total_line_item_value
+    FROM scms_shipments
+    WHERE Country IN (
+        SELECT Country FROM scms_shipments
+        GROUP BY Country
+        HAVING COUNT(*) >= 100
+    )
+    GROUP BY Country, YEAR(Scheduled_Delivery_Date)
+),
+Country_Year_Trend AS (
+    SELECT *,
+        LAG(total_line_item_value, 1) OVER (
+            PARTITION BY Country ORDER BY year
+        ) AS prev_year_value,
+        ROUND(
+            total_line_item_value - LAG(total_line_item_value, 1) OVER (
+                PARTITION BY Country ORDER BY year
+            )
+        , 2) AS absolute_yoy_change,
+        ROUND(
+            (total_line_item_value - LAG(total_line_item_value, 1) OVER (
+                PARTITION BY Country ORDER BY year)
+            ) * 100.0 / NULLIF(
+                LAG(total_line_item_value, 1) OVER (
+                    PARTITION BY Country ORDER BY year), 0)
+        , 2) AS yoy_percentage_change
+    FROM Country_Year_Base
+)
+SELECT 
+    Country,
+    year,
+    total_shipments,
+    total_line_item_value,
+    prev_year_value,
+    absolute_yoy_change,
+    yoy_percentage_change
+FROM Country_Year_Trend
+ORDER BY Country, year;
+
+
+-- 12) Business Question: How has shipment volume changed month over month and what is the cumulative procurement value over time?
+-- Query 12 — Monthly Shipment Volume and Running Total
+    
+WITH monthly_base AS (
+	SELECT MONTH(Scheduled_Delivery_Date) AS month,
+    YEAR(Scheduled_Delivery_Date) AS year,
+    COUNT(*) AS total_shipments,
+    SUM(Line_Item_Value) as total_line_item_value
+    FROM scms_shipments
+    WHERE Scheduled_Delivery_Date IS NOT NULL
+    GROUP BY YEAR(Scheduled_Delivery_Date),MONTH(Scheduled_Delivery_Date) 
+    
+	
+),
+
+monthly_trend AS (
+	SELECT year,
+		month,
+        total_shipments,
+        total_line_item_value,
+        LAG(total_shipments,1) OVER( ORDER BY year, month ) AS previous_month_shipment,
+		ROUND(total_shipments - LAG(total_shipments,1) OVER( ORDER BY year, month),2) AS absolute_mom_change,
+        ( total_shipments - LAG(total_shipments) OVER (ORDER BY year, month))* 100.0 / NULLIF(LAG(total_shipments,1) OVER( ORDER BY year, month ),0) AS mom_percentage_change,
+        ROUND(SUM(total_line_item_value) OVER( ORDER BY year, month ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW ),2) AS running_total_value 
+        
+	FROM monthly_base 
+)
+
+SELECT year,
+	month,
+    total_shipments,
+    total_line_item_value,
+    previous_month_shipment,
+    absolute_mom_change,
+    mom_percentage_change,
+    running_total_value 
+    
+FROM monthly_trend
+ORDER BY YEAR,MONTH ;
+    
+
+
+-- 13) Business Question: Is overall delivery performance improving or deteriorating quarter by quarter? I need to see the quarterly on-time rate with a comparison to the previous quarter so I can identify whether interventions are working.
+-- Query 13 — Quarterly On-Time Rate Trend
+    
+    
+WITH quarterly_base AS (
+	SELECT year(Scheduled_Delivery_Date) AS year,
+    quarter(Scheduled_Delivery_Date) AS quarter,
+    COUNT(*) AS total_shipments,
+    sum(case 
+			when On_Time_Delivery = 'On Time' Then 1 
+			Else 0 
+		END) AS On_time_shipments,
+	ROUND(sum(case 
+			when On_Time_Delivery = 'On Time' Then 1 
+			Else 0 
+		END) * 100.0/ COUNT(*),2) AS on_time_shipment_rate
+    FROM scms_shipments
+    WHERE Scheduled_Delivery_Date IS NOT NULL
+    GROUP BY YEAR(Scheduled_Delivery_Date),quarter(Scheduled_Delivery_Date)
+    
+	
+),
+
+quarterly_trend AS (
+	SELECT year,
+		quarter,
+        total_shipments,
+        On_time_shipments,
+        on_time_shipment_rate,
+        LAG(On_time_shipments,1) OVER( ORDER BY year, quarter ) AS previous_quarter_shipment,
+        ( On_time_shipments - LAG(On_time_shipments) OVER (ORDER BY year, quarter))* 100.0 / NULLIF(LAG(On_time_shipments) OVER( ORDER BY year, quarter ),0) AS qoq_change
+	FROM quarterly_base 
+)
+
+SELECT year,
+		quarter,
+        total_shipments,
+        On_time_shipments,
+        on_time_shipment_rate,
+        previous_quarter_shipment,
+        qoq_change
+    
+FROM quarterly_trend 
+ORDER BY year,quarter ;
+    
+    
+    
+    
+    
+    

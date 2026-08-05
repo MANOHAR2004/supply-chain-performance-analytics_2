@@ -339,8 +339,25 @@ Which countries receive the most procurement value and
 how has that changed year over year?
 
 **SQL Reference:** 03_analysis.sql — Query 11
-**Key Finding:** [Pending]
-**Recommendation:** [Pending]
+**Key Finding:**
+Nigeria: Largest and most consistent procurement country.
+$160K in 2006 to $64.7M in 2015 — strongest growth trajectory.
+
+South Africa paradox: Best delivery performance but procurement
+collapsed 94% after 2011 peak of $67.7M. Now receives minimal
+value despite being most reliable corridor.
+
+Mozambique 2014 anomaly: 177% spike ($59.7M) followed by
+55.76% decline — likely emergency procurement event.
+
+Tanzania and Kenya show signs of procurement relationship
+termination in 2014-2015.
+
+**Recommendation:**
+Investigate South Africa procurement collapse — if driven by
+budget reallocation rather than performance issues, redirecting
+volume back to this reliable corridor could improve overall
+on-time rates. Monitor Tanzania and Kenya for complete exit.
 
 ---
 
@@ -352,8 +369,20 @@ How has shipment volume changed month over month and
 what is the cumulative procurement value over time?
 
 **SQL Reference:** 03_analysis.sql — Query 12
-**Key Finding:** [Pending]
-**Recommendation:** [Pending]
+**Key Finding:**
+Total programme procurement value: $1.627 billion (2006-2015)
+
+Key anomalies:
+- August 2014: 271 shipments — largest single month (171% MoM spike)
+- Late 2015: Near-complete shutdown (1 shipment in October)
+- 2006-2012: Strong growth phase scaling from 2 to 200 shipments/month
+- No clear seasonal pattern — demand-driven procurement
+
+**Recommendation:**
+August 2014 spike warrants investigation — emergency procurement
+or planned stockpiling? Late 2015 decline suggests programme
+transition. Running total confirms $1.6B+ programme scale —
+significant investment requiring robust vendor management.
 
 ---
 
