@@ -388,23 +388,104 @@ significant investment requiring robust vendor management.
 
 ### BQ-13 — Quarterly On-Time Rate Trend
 **Business Question:**
-Is overall delivery performance improving or
-deteriorating over time on a quarterly basis?
+Is overall delivery performance improving or deteriorating
+quarter by quarter? Where were the biggest single-quarter
+drops and recoveries in programme history?
+
+**Why It Matters:**
+Quarterly tracking reveals whether performance interventions
+are working in near-real-time. Annual averages hide crisis
+periods — a quarter with 62% on-time rate averaged with
+three good quarters still looks acceptable annually.
+Quarterly granularity catches problems before they compound.
+
+**Data Used:**
+Scheduled_Delivery_Date, On_Time_Delivery
 
 **SQL Reference:** 03_analysis.sql — Query 13
-**Key Finding:** [Pending]
-**Recommendation:** [Pending]
+
+**Key Finding:**
+Three distinct performance phases identified:
+
+Phase 1 — Golden Period (2007-2009):
+Consistently 94-100% on-time rate. QoQ changes mostly
+within ±5 percentage points. Stable, well-managed programme.
+
+Phase 2 — Crisis (Q3 2010 to Q2 2011):
+Q3 2010: -7.76pp — first warning signal
+Q4 2010: -18.43pp — catastrophic single-quarter collapse
+Q2 2011: 62.00% — absolute worst quarter in programme history
+Total decline from peak: approximately 38 percentage points
+
+Phase 3 — Recovery and Instability (2012-2015):
+Q3 2011: +22.47pp — largest single-quarter improvement,
+suggesting a specific operational intervention occurred
+2012: Gradual stabilisation toward 90-97% range
+2013-2014: High volatility, swinging 77% to 95% with no
+consistent trend — programme never fully stabilised
+
+Critical correlation: Q4 2010 collapse and Q2 2011 bottom
+align exactly with SCMS from RDC's peak late rate of 34.10%
+in 2011 (BQ-07). Single vendor caused programme-wide crisis.
+
+**Recommendation:**
+Implement quarterly on-time rate monitoring with 85% as
+minimum acceptable threshold and automatic vendor review
+trigger. Q4 2010's -18.43pp single-quarter drop should
+have triggered immediate intervention — real-time quarterly
+dashboarding would have caught this 6 months earlier.
+
+Investigate Q3 2011 recovery (+22.47pp) — what specific
+operational change caused the largest single-quarter
+improvement? Replicating that intervention is valuable
+institutional knowledge for future crisis management.
 
 ---
-
 ### BQ-14 — Year Over Year Late Rate Change
 **Business Question:**
-Which years had the worst delivery performance and
-what was the rate of change between years?
+How has the annual late shipment rate changed year over
+year and which years represent genuine deterioration vs
+improvement vs stable performance?
+
+**Why It Matters:**
+Annual YoY classification cuts through noise to give
+executives a simple signal — is the programme getting
+better or worse this year? Single percentage point
+threshold separates meaningful change from normal
+variation.
+
+**Data Used:**
+Scheduled_Delivery_Date, On_Time_Delivery
 
 **SQL Reference:** 03_analysis.sql — Query 14
-**Key Finding:** [Pending]
-**Recommendation:** [Pending]
+
+**Key Finding:**
+Programme performance timeline:
+
+2006-2009: Low baseline late rate (0-2.55%)
+2010-2011: Crisis — four consecutive Deteriorating years
+  - 2010: +11.07pp single year jump (0% to 13.62%)
+  - 2011: Peak at 21.76% — 4x the acceptable baseline
+2012: Largest single year recovery (-14.85pp)
+2013: Immediate relapse (+8.34pp) — recovery not sustained
+2014-2015: Gradual improvement trend
+
+Critical finding: Programme ended in 2015 at 10.52%
+late rate — never recovered to 2006-2009 baseline of
+0-2.55%. Despite recovery efforts, permanent performance
+degradation occurred after the 2010-2011 crisis.
+
+Deteriorating years: 2007, 2009, 2010, 2011, 2013 (5 of 9)
+Improving years: 2008, 2012, 2014, 2015 (4 of 9)
+
+**Recommendation:**
+The 2013 relapse after 2012 recovery confirms that
+short-term performance fixes without structural vendor
+changes are ineffective. SCMS from RDC contract should
+have been restructured in 2012 during recovery — instead
+2013 saw immediate relapse. Sustainable improvement
+requires contract-level intervention, not operational
+adjustments alone.
 
 ---
 

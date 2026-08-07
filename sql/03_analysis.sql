@@ -521,8 +521,10 @@ quarterly_trend AS (
         total_shipments,
         On_time_shipments,
         on_time_shipment_rate,
-        LAG(On_time_shipments,1) OVER( ORDER BY year, quarter ) AS previous_quarter_shipment,
-        ( On_time_shipments - LAG(On_time_shipments) OVER (ORDER BY year, quarter))* 100.0 / NULLIF(LAG(On_time_shipments) OVER( ORDER BY year, quarter ),0) AS qoq_change
+        LAG(on_time_shipment_rate, 1) OVER (ORDER BY year, quarter) AS previous_quarter_rate,
+ROUND(
+    on_time_shipment_rate - LAG(on_time_shipment_rate, 1) OVER (ORDER BY year, quarter)
+, 2) AS qoq_rate_change
 	FROM quarterly_base 
 )
 
@@ -531,14 +533,54 @@ SELECT year,
         total_shipments,
         On_time_shipments,
         on_time_shipment_rate,
-        previous_quarter_shipment,
-        qoq_change
+        previous_quarter_rate,
+        qoq_rate_change
     
 FROM quarterly_trend 
 ORDER BY year,quarter ;
     
+-- 14)Business Question: How has the annual late shipment rate changed year over year across the entire programme?    
+-- Query 14 — Year Over Year Late Rate Change
     
+   
     
+WITH annual_base AS (
+	SELECT year(Scheduled_Delivery_Date) AS year,
+    COUNT(*) AS total_shipments,
+        SUM(CASE WHEN On_Time_Delivery = 'Late' THEN 1 ELSE 0 END) as late_shipments,
+		ROUND(
+            SUM(CASE WHEN On_Time_Delivery = 'Late' THEN 1 ELSE 0 END) 
+            * 100.0 / COUNT(*), 2
+        ) AS Late_shipment_rate
+    FROM scms_shipments
+    GROUP BY YEAR(Scheduled_Delivery_Date)
     
-    
+	
+),
+
+annual_metric AS (
+	SELECT year,
+        total_shipments,
+        late_shipments,
+        Late_shipment_rate,
+        LAG(late_shipment_rate, 1) OVER (ORDER BY year ) AS previous_annual_rate,
+		ROUND(late_shipment_rate - LAG(late_shipment_rate, 1) OVER (ORDER BY year ),2) AS yoy_change_pp,
+        case
+			when late_shipment_rate - LAG(late_shipment_rate, 1) OVER (ORDER BY year ) < -1 THEN  "Improving"
+            when late_shipment_rate - LAG(late_shipment_rate, 1) OVER (ORDER BY year ) > 1 THEN  "Deteriorating"
+            WHEN late_shipment_rate - LAG(late_shipment_rate, 1) OVER (ORDER BY year) BETWEEN -1 AND 1 THEN "Stable"
+            else "No prior data"
+        END as performance_status
+        from annual_base
+)
+
+SELECT year,
+		late_shipments,
+        total_shipments,
+        Late_shipment_rate,
+        previous_annual_rate,
+        yoy_change_pp,
+        performance_status
+FROM  annual_metric
+ORDER BY year ;
     
