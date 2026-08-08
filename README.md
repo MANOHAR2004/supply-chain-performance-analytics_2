@@ -209,14 +209,38 @@ Aspiring Data Analyst | Python · SQL · Power BI
 **Completed:**
 - Database schema designed with correct data types
 - Python loading script built using mysql-connector-python
+-  03_analysis.sql — 20+ analytical queries
+- 04_views.sql — views for Power BI connection
 
 ![screenshot](<img width="745" height="715" alt="image" src="https://github.com/user-attachments/assets/783338d8-4040-45fa-9375-d78ca00d0600" />
 
 )
 - 10,324 rows loaded and verified in MySQL
 - All data type conversions applied via ALTER TABLE
+- 
+## SQL Analysis ✓ Complete
 
-**In Progress:**
-- 03_analysis.sql — 35+ analytical queries
-- 04_views.sql — views for Power BI connection
+**Database:** supply_chain_db | **Table:** scms_shipments
+**Rows loaded:** 10,324 | **Views created:** 2
+
+### SQL Concepts Demonstrated
+- CTEs (single, chained, recursive)
+- Window functions (RANK, DENSE_RANK, NTILE, LAG, SUM OVER)
+- PARTITION BY for independent group calculations
+- Correlated and independent subqueries
+- Stored procedures with input parameters
+- Composite scoring with weighted metrics
+- LEFT JOIN between CTEs for bias-free analysis
+- Running totals with ROWS BETWEEN UNBOUNDED PRECEDING
+- Views for Power BI connectivity
+
+### Key Business Findings
+- Overall on-time delivery rate: 89.52%
+- Total programme procurement value: $1.587 billion
+- Highest risk vendor: SCMS from RDC (15.30% late rate)
+- Highest risk country: Congo DRC (24.92% late rate, +11.24 avg delay)
+- Best performing vendor: Bristol-Myers Squibb (0% late rate)
+- Best performing country: Vietnam (0.87% late rate)
+- 2010-2011 crisis: On-time rate collapsed to 62% minimum
+- Programme never recovered to pre-2010 baseline (0-2% late rate)
 
