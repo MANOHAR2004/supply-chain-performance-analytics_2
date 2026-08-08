@@ -491,37 +491,165 @@ adjustments alone.
 
 ## Business Area 5 — Advanced Analysis
 
-### BQ-15 — Vendor NTILE Segmentation
+### BQ-15 — NTILE Vendor Segmentation
 **Business Question:**
-Can we segment all vendors into performance tiers
-(High Risk, Medium Risk, Low Risk, Reliable) based
-on combined delivery and cost metrics?
+Can we segment all vendors into four performance tiers
+based on late shipment rate to create a simple vendor
+classification for procurement decisions and dashboard
+filtering?
+
+**Why It Matters:**
+Binary good/bad vendor classification misses nuance.
+Four-tier segmentation allows graduated intervention —
+different contract terms for High Risk vs Medium Risk
+vs immediate termination consideration for persistent
+High Risk vendors. Also enables Power BI slicer for
+filtering dashboard by vendor risk tier.
+
+**Data Used:**
+Vendor, On_Time_Delivery, Delivery_Delay_Days
+Minimum threshold: 30+ shipments for statistical validity
 
 **SQL Reference:** 03_analysis.sql — Query 15
-**Key Finding:** [Pending]
-**Recommendation:** [Pending]
+
+**Key Finding:**
+21 vendors with 30+ shipments segmented into four tiers:
+
+High Risk (6 vendors): 10-15.30% late rate
+- SCMS from RDC: 15.30% (5,404 shipments — highest volume risk)
+- CIPLA LIMITED: 12.57%
+- Aurobindo Pharma: 12.13%
+- Orgenics Ltd: 10.21%
+
+Medium Risk (5 vendors): 1.79-3.06% late rate
+Low Risk (5 vendors): 0.63-1.15% late rate
+
+Reliable (5 vendors): 0-0.36% late rate
+- HETERO LABS: 277 shipments, 0.36%
+- Trinity Biotech: 356 shipments, 0.28%
+- Bristol-Myers Squibb: 67 shipments, 0% 
+- Pharmacy Direct: 326 shipments, 0%
+- Micro Labs: 35 shipments, 0%
+
+**Recommendation:**
+Immediate contract review for all 6 High Risk vendors.
+Shift procurement volume from High Risk to Reliable tier
+where capacity exists. Use Performance_Tier as a slicer
+in Power BI dashboard to enable tier-based filtering
+across all dashboard pages.
 
 ---
 
 ### BQ-16 — Shipment Classification Hierarchy
 **Business Question:**
-How do shipments break down across the classification
-hierarchy from Product Group to Sub Classification?
+How do shipments break down across the product
+classification hierarchy — from Product Group level
+down to Sub Classification level? Which categories
+dominate procurement volume and which are marginal?
+
+**Why It Matters:**
+Understanding volume distribution across the product
+hierarchy guides procurement prioritisation. A product
+group representing 83% of shipments deserves
+proportionally more supply chain scrutiny than one
+representing 0.08%. Hierarchy analysis also identifies
+whether sub-categories within a group are balanced
+or concentrated.
+
+**Data Used:**
+Product_Group, Sub_Classification
 
 **SQL Reference:** 03_analysis.sql — Query 16
-**Key Finding:** [Pending]
-**Recommendation:** [Pending]
+
+**Key Finding:**
+Level 1 — Product Group Distribution:
+- ARV (Antiretrovirals): 8,550 shipments — 82.82%
+  Dominant category, nearly 5x all others combined
+- HRDT (Diagnostic Test Kits): 1,728 shipments — 16.74%
+  Second category, significant but much smaller
+- ANTM, ACT, MRDT: Combined only 0.44% of shipments
+  Marginal categories with minimal volume
+
+Level 2 — Sub Classification Distribution:
+- Adult ARV: 6,595 shipments — 63.88% of all shipments
+  Single largest sub-category by far
+- Pediatric ARV: 1,955 shipments — 18.94%
+  Second largest — adult vs pediatric ARV = 82.82% combined
+- HIV test (HRDT): 1,567 shipments — 15.18%
+- All others: Combined under 2%
+
+Critical concentration risk: Adult ARV alone represents
+63.88% of all programme shipments. Any disruption to
+this single sub-category — vendor failure, logistics
+breakdown, or supply shortage — affects nearly 2 in 3
+shipments programme-wide.
+
+**Recommendation:**
+Procurement risk management should weight interventions
+by volume share. Adult ARV supply chain deserves
+dedicated vendor monitoring given its 63.88% concentration.
+Diversifying Adult ARV vendor base beyond current
+dominant suppliers reduces single-point-of-failure risk.
+Consider minimum 2-vendor policy for any sub-category
+exceeding 20% of total shipment volume.
 
 ---
 
-### BQ-17 — Stored Procedure: Vendor Report
+### BQ-17 — Stored Procedure: Vendor Performance Report
 **Business Question:**
-Can we create a reusable report that generates
-complete performance metrics for any vendor on demand?
+Can we create a reusable, on-demand report that generates
+a complete vendor scorecard for any vendor instantly —
+without requiring SQL knowledge from the end user?
+
+**Why It Matters:**
+Procurement managers need vendor scorecards regularly
+for contract reviews, renewal decisions, and performance
+meetings. A stored procedure democratises data access —
+any authorised user can call CALL GetVendorReport('name')
+and get a complete four-section report instantly without
+writing any SQL.
+
+**Data Used:**
+All columns — Vendor, On_Time_Delivery, Delivery_Delay_Days,
+Freight_Cost_USD, Freight_Type, Country,
+Scheduled_Delivery_Date
 
 **SQL Reference:** 03_analysis.sql — Query 17
-**Key Finding:** [Reusable procedure — no static finding]
-**Recommendation:** [Pending]
+
+**Procedure Name:** GetVendorReport
+**Parameter:** vendor_name VARCHAR(200)
+
+**Output Structure:**
+Result Set 1 — Overall scorecard (1 row):
+Total shipments, on-time rate, late rate, avg delay,
+late shipments count, avg freight cost, countries served
+
+Result Set 2 — Freight type distribution:
+Separate vs Absorbed breakdown with late rate per type
+
+Result Set 3 — Year by year performance trend:
+Annual shipments, late rate, avg delay (2006-2015)
+
+Result Set 4 — Country breakdown:
+Per-country shipments, late rate, avg delay
+
+**Usage Examples:**
+CALL GetVendorReport('SCMS from RDC');
+CALL GetVendorReport('CIPLA LIMITED');
+CALL GetVendorReport('Trinity Biotech, Plc');
+
+**Key Finding:**
+Procedure successfully generates complete vendor intelligence
+in one command. SCMS from RDC report confirms all previous
+findings — 15.3% late rate, deteriorating trend 2010-2014,
+active in 17+ countries.
+
+**Recommendation:**
+Make this procedure available to procurement team leads
+for monthly vendor review meetings. Add to MySQL user
+permissions so non-technical stakeholders can run it
+directly. Consider extending with an email parameter
+to automate monthly vendor report distribution.
 
 ---
 

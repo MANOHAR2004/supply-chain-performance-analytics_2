@@ -583,4 +583,162 @@ SELECT year,
         performance_status
 FROM  annual_metric
 ORDER BY year ;
+
+
+-- 15) Business Question: Can we segment all vendors into four performance tiers — High Risk, Medium Risk, Low Risk, and Reliable — based on a combined score of late rate and average delay?
+-- Query 15 — NTILE Vendor Segmentation
+
+
+WITH Vendor_metrics AS (
+    SELECT 
+        Vendor,
+        COUNT(*) AS total_shipments,
+        ROUND(AVG(Delivery_Delay_Days), 2) AS avg_delay_days,
+        SUM(CASE WHEN On_Time_Delivery = 'Late' THEN 1 ELSE 0 END) AS late_shipments,
+        ROUND(
+            SUM(CASE WHEN On_Time_Delivery = 'Late' THEN 1 ELSE 0 END) 
+            * 100.0 / COUNT(*), 2
+        ) AS late_shipment_percentage
+    FROM scms_shipments
+    GROUP BY Vendor
+    HAVING COUNT(*) > 30
+),
+Vendor_segmented AS (
+    SELECT 
+        Vendor,
+        total_shipments,
+        avg_delay_days,
+        late_shipment_percentage,
+        NTILE(4) OVER (
+            ORDER BY late_shipment_percentage DESC
+        ) AS risk_bucket
+    FROM Vendor_metrics
+)
+SELECT 
+    Vendor,
+    total_shipments,
+    avg_delay_days,
+    late_shipment_percentage,
+    risk_bucket,
+    CASE 
+        WHEN risk_bucket = 1 THEN 'High Risk'
+        WHEN risk_bucket = 2 THEN 'Medium Risk'
+        WHEN risk_bucket = 3 THEN 'Low Risk'
+        WHEN risk_bucket = 4 THEN 'Reliable'
+    END AS Performance_Tier
+FROM Vendor_segmented
+ORDER BY late_shipment_percentage DESC;
+
+
+-- 16) Business Question: How do shipments break down across the classification hierarchy — from Product Group down to Sub Classification? I need to see the hierarchy levels and shipment counts at each level.
+-- Query 16 — Recursive CTE for Shipment Classification Hierarchy
+
+
+WITH RECURSIVE classification_hierarchy AS (
+    SELECT 
+        1 AS level,
+        Product_Group AS category,
+        'All Products' AS parent_category,
+        COUNT(*) AS total_shipments
+    FROM scms_shipments
+    GROUP BY Product_Group
     
+    UNION ALL
+    
+    SELECT 
+        2 AS level,
+        s.Sub_Classification AS category,
+        s.Product_Group AS parent_category,
+        COUNT(*) AS total_shipments
+    FROM scms_shipments s
+    GROUP BY s.Product_Group, s.Sub_Classification
+)
+SELECT 
+    level,
+    category,
+    parent_category,
+    total_shipments,
+    ROUND(
+        total_shipments * 100.0 / 
+        SUM(total_shipments) OVER (PARTITION BY level)
+    , 2) AS pct_of_level
+FROM classification_hierarchy
+ORDER BY level, total_shipments DESC;
+
+-- 17) Business Question: Can we create a reusable report that generates complete performance metrics for any vendor on demand?
+-- Query 17 — Stored Procedure for Vendor Report
+
+DELIMITER //
+
+CREATE PROCEDURE GetVendorReport(IN vendor_name VARCHAR(200))
+BEGIN
+
+    -- Query 1: Overall vendor scorecard
+    SELECT 
+        vendor_name AS Vendor,
+        COUNT(*) AS total_shipments,
+        ROUND(
+            SUM(CASE WHEN On_Time_Delivery = 'On Time' THEN 1 ELSE 0 END) 
+            * 100.0 / COUNT(*), 2
+        ) AS on_time_rate,
+        ROUND(
+            SUM(CASE WHEN On_Time_Delivery = 'Late' THEN 1 ELSE 0 END) 
+            * 100.0 / COUNT(*), 2
+        ) AS late_rate,
+        ROUND(AVG(Delivery_Delay_Days), 2) AS avg_delay_days,
+        SUM(CASE WHEN On_Time_Delivery = 'Late' THEN 1 ELSE 0 END) AS late_shipments,
+        ROUND(AVG(Freight_Cost_USD), 2) AS avg_freight_cost,
+        COUNT(DISTINCT Country) AS countries_served
+    FROM scms_shipments
+    WHERE Vendor = vendor_name;
+
+    -- Query 2: Freight type distribution
+    SELECT 
+        Freight_Type,
+        COUNT(*) AS shipments,
+        ROUND(COUNT(*) * 100.0 / SUM(COUNT(*)) OVER (), 2) AS pct_of_total,
+        ROUND(
+            SUM(CASE WHEN On_Time_Delivery = 'Late' THEN 1 ELSE 0 END) 
+            * 100.0 / COUNT(*), 2
+        ) AS late_rate
+    FROM scms_shipments
+    WHERE Vendor = vendor_name
+    GROUP BY Freight_Type;
+
+    -- Query 3: Year by year performance trend
+    SELECT 
+        YEAR(Scheduled_Delivery_Date) AS year,
+        COUNT(*) AS total_shipments,
+        ROUND(
+            SUM(CASE WHEN On_Time_Delivery = 'Late' THEN 1 ELSE 0 END) 
+            * 100.0 / COUNT(*), 2
+        ) AS late_rate,
+        ROUND(AVG(Delivery_Delay_Days), 2) AS avg_delay_days
+    FROM scms_shipments
+    WHERE Vendor = vendor_name
+    GROUP BY YEAR(Scheduled_Delivery_Date)
+    ORDER BY year;
+
+    -- Query 4: Country breakdown for this vendor
+    SELECT 
+        Country,
+        COUNT(*) AS shipments,
+        ROUND(
+            SUM(CASE WHEN On_Time_Delivery = 'Late' THEN 1 ELSE 0 END) 
+            * 100.0 / COUNT(*), 2
+        ) AS late_rate,
+        ROUND(AVG(Delivery_Delay_Days), 2) AS avg_delay_days
+    FROM scms_shipments
+    WHERE Vendor = vendor_name
+    GROUP BY Country
+    ORDER BY shipments DESC;
+
+END //
+
+DELIMITER ;
+
+
+
+
+call GetVendorReport('SCMS from RDC');
+CALL GetVendorReport('CIPLA LIMITED');
