@@ -655,26 +655,181 @@ to automate monthly vendor report distribution.
 
 ### BQ-18 — Executive KPI Dashboard Query
 **Business Question:**
-What is the single-query executive summary of all
-supply chain health metrics?
+What is the complete supply chain health summary in a
+single view — all headline KPIs that an executive needs
+for a programme overview in one result row?
+
+**Why It Matters:**
+Executive dashboards need a single source of truth for
+headline metrics. This query powers the executive summary
+page of the Power BI dashboard — all KPI cards draw
+from this single query result. No aggregation needed
+in Power BI for these metrics.
+
+**Data Used:** All columns, excluding Unknown Shipment Mode
 
 **SQL Reference:** 03_analysis.sql — Query 18
-**Key Finding:** [Pending]
-**Recommendation:** [Pending]
+
+**Key Finding:**
+Complete programme health snapshot:
+- Scale: 9,964 shipments, 72 vendors, 43 countries
+- Performance: 89.52% on-time, 10.48% late rate
+- Efficiency: $1.587B procurement, $67.4M freight (4.25%)
+- Delivery: -6.15 days average (fleet delivers early)
+- Best vendor: Bristol-Myers Squibb (0% late rate)
+- Worst vendor: SCMS from RDC (15.30% late rate)
+- Best country: Vietnam (0.87% late rate)
+- Worst country: Congo DRC (24.92% late rate)
+
+**Recommendation:**
+Use this as the Power BI executive summary page anchor.
+All eight KPI card visuals on the dashboard home page
+should reference this query result via the
+vw_delivery_performance view created in Query 19.
 
 ---
 
 ## Business Area 6 — Power BI Views
 
-### BQ-19 — Delivery Performance View
-**Purpose:** Pre-aggregated view for Power BI delivery
-performance dashboard page.
-**SQL Reference:** 04_views.sql — View 1
+### BQ-19 — View for Power BI Delivery Performance Dashboard
+**Business Question:**
+How can we provide Power BI with a clean, pre-filtered,
+row-level dataset that enables flexible delivery performance
+analysis without running complex SQL queries on every
+dashboard refresh?
 
-### BQ-20 — Vendor and Country Analysis View
-**Purpose:** Pre-aggregated view for Power BI vendor
-and geography dashboard pages.
-**SQL Reference:** 04_views.sql — View 2
+**Why It Matters:**
+Power BI performs best with clean row-level views rather
+than pre-aggregated tables. Row-level data allows DAX
+measures to aggregate dynamically based on slicer
+selections — if the data is pre-aggregated in SQL,
+Power BI loses the ability to filter and slice flexibly.
+A dedicated view also ensures consistent filtering
+(Unknown Shipment Mode excluded) across all dashboard
+visuals without repeating WHERE clauses in every query.
+
+**Data Used:**
+ID, Country, Vendor, Shipment_Mode, Scheduled_Delivery_Date,
+Delivered_to_Client_Date, Delivery_Delay_Days, On_Time_Delivery,
+Delivery_Status, Product_Group, Line_Item_Value,
+Freight_Cost_USD, Freight_Type, Weight_Kilograms
+
+**SQL Reference:** 04_views.sql — Query 19
+
+**View Name:** vw_delivery_performance
+**Row Count:** 9,964 (Unknown Shipment Mode excluded)
+
+**Columns Added Beyond Base Table:**
+- Year — extracted from Scheduled_Delivery_Date
+- Quarter — extracted from Scheduled_Delivery_Date
+- Month — extracted from Scheduled_Delivery_Date
+- Freight_Cost_Ratio — Freight_Cost_USD as % of Line_Item_Value
+
+**Design Decisions:**
+Row-level view chosen over pre-aggregated view because:
+1. DAX measures in Power BI need row-level data to
+   calculate correctly with slicer context
+2. Time intelligence DAX functions require date columns
+   at row level not pre-grouped year/quarter columns
+3. Drill-through pages in Power BI require row-level
+   detail to show individual shipment records
+
+**Verification:**
+SELECT COUNT(*) FROM vw_delivery_performance → 9,964 rows
+Matches executive KPI query total confirming filter
+consistency across all analyses.
+
+**Power BI Usage:**
+This view connects to the following dashboard pages:
+- Page 1: Executive Summary (KPI cards)
+- Page 2: Delivery Performance (trend charts, mode comparison)
+- Page 3: Country Analysis (map visual, risk ranking)
+
+**Recommendation:**
+Connect Power BI directly to this view via MySQL connector.
+Refresh schedule: daily if live MySQL connection,
+or export to CSV for static dashboard version.
+All DAX measures should reference this view as
+the primary fact table in the data model.
+
+---
+
+### BQ-20 — View for Power BI Vendor and Country Analysis
+**Business Question:**
+How can we provide Power BI with a dedicated dataset
+optimised for vendor performance and country-level
+analysis pages — including pre-calculated freight
+cost ratios that would be complex to compute in DAX?
+
+**Why It Matters:**
+While vw_delivery_performance serves general delivery
+analysis, vendor and country pages require additional
+columns — Sub_Classification, Dosage_Applicable,
+Weight_Kilograms, and pre-calculated Freight_Cost_Ratio.
+Separating into two views keeps each view focused,
+reduces column clutter in Power BI, and allows
+independent refresh schedules if needed.
+
+Pre-calculating Freight_Cost_Ratio in SQL rather than
+DAX avoids a complex DAX DIVIDE measure that would
+need to handle nulls and absorbed freight rows —
+simpler and more reliable to compute at the data layer.
+
+**Data Used:**
+ID, Vendor, Country, Product_Group, Sub_Classification,
+Shipment_Mode, Scheduled_Delivery_Date, Delivery_Delay_Days,
+On_Time_Delivery, Delivery_Status, Freight_Type,
+Freight_Cost_USD, Line_Item_Value, Dosage_Applicable,
+Weight_Kilograms
+
+**SQL Reference:** 04_views.sql — Query 20
+
+**View Name:** vw_vendor_country_analysis
+**Row Count:** 9,964 (Unknown Shipment Mode excluded)
+
+**Columns Added Beyond Base Table:**
+- Year — extracted from Scheduled_Delivery_Date
+- Quarter — extracted from Scheduled_Delivery_Date
+- Freight_Cost_Ratio — pre-calculated with NULLIF
+  protection against division by zero
+
+**Design Decisions:**
+NULLIF(Line_Item_Value, 0) used in ratio calculation
+to prevent division by zero errors on rows where
+line item value is zero. Returns NULL instead of
+error — Power BI handles NULL gracefully in visuals.
+
+Dosage_Applicable included specifically for filtering
+HRDT and MRDT product groups in vendor analysis —
+these groups have no dosage and need separate
+treatment in dashboard visuals.
+
+**Verification:**
+SELECT COUNT(*) FROM vw_vendor_country_analysis → 9,964 rows
+Consistent with vw_delivery_performance confirming
+both views apply identical base filtering.
+
+**Power BI Usage:**
+This view connects to the following dashboard pages:
+- Page 3: Vendor Scorecard (vendor tier slicer,
+  performance ranking table)
+- Page 4: Country Risk Analysis (composite risk map,
+  country comparison charts)
+
+**Relationship in Power BI Data Model:**
+Both views share the ID column — they can be related
+in Power BI as two fact tables linked through
+a shared ID key if needed for cross-page filtering.
+Alternatively use as independent tables per page.
+
+**Recommendation:**
+Use Freight_Cost_Ratio from this view directly in
+Power BI rather than recalculating in DAX. This
+ensures consistent ratio calculation methodology
+across SQL analysis and Power BI dashboard —
+numbers will match exactly between your SQL output
+and dashboard visuals, which is critical for
+credibility when presenting to stakeholders.
 
 ---
 
@@ -687,8 +842,8 @@ and geography dashboard pages.
 | BQ-02 | Vendor late ranking | ✓ Complete | SCMS RDC 15.3% late |
 | BQ-03 | Country delay | ✓ Complete | Congo DRC crisis level |
 | BQ-04 | Freight cost by mode | ✓ Complete | Air least efficient 8.48% |
-| BQ-05 | Vendor scorecard | 🔄 In Progress | |
-| BQ-06 to BQ-20 | Various | 📋 Pending | |
+| BQ-05 | Vendor scorecard |completed | |
+| BQ-06 to BQ-20 | Various | 📋 completed | |
 
 ---
 

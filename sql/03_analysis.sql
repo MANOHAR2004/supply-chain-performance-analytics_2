@@ -737,8 +737,63 @@ END //
 
 DELIMITER ;
 
-
-
-
 call GetVendorReport('SCMS from RDC');
 CALL GetVendorReport('CIPLA LIMITED');
+
+
+-- 18) Business Question: Give me a single query that shows the complete supply chain health summary — all headline KPIs in one result set that I can display on the executive summary page of my Power BI dashboard.
+-- Query 18 — Executive KPI Dashboard Query
+
+SELECT COUNT(*) AS total_shipment,
+		ROUND(
+            SUM(CASE WHEN On_Time_Delivery = 'On Time' THEN 1 ELSE 0 END) 
+            * 100.0 / COUNT(*), 2
+        ) AS Overall_ontime_rate,
+        ROUND(
+            SUM(CASE WHEN On_Time_Delivery = 'Late' THEN 1 ELSE 0 END) 
+            * 100.0 / COUNT(*), 2
+        ) AS Overall_late_rate,
+        ROUND(SUM(CASE WHEN Freight_Type = 'Separate' 
+        THEN Freight_Cost_USD ELSE 0 END), 2) AS total_freight_cost,
+        ROUND(SUM(Line_Item_Value),2) AS total_procurement_value,
+        COUNT(DISTINCT Vendor) AS unique_vendor,
+        COUNT(DISTINCT Country) AS unique_countries,
+         ROUND(AVG(Delivery_Delay_Days), 2) AS avg_delay_days,
+         ROUND(
+    SUM(CASE WHEN Freight_Type = 'Separate' 
+        THEN Freight_Cost_USD ELSE 0 END) * 100.0 
+    / SUM(Line_Item_Value), 2
+) AS freight_cost_pct_of_value,
+		(SELECT Vendor
+	FROM scms_shipments 
+    GROUP BY Vendor
+    HAVING COUNT(*) > 50
+    Order by sum( case when On_Time_Delivery = "Late" then 1 else 0 
+    end) * 100.0 / count(*) asc
+    limit 1) as best_vendor,
+    (SELECT Vendor
+		FROM scms_shipments 
+		GROUP BY Vendor
+		HAVING COUNT(*) > 50
+		Order by sum( case when On_Time_Delivery = "Late" then 1 else 0 
+		end) * 100.0 / count(*) desc
+		limit 1) as worst_vendor,
+        (SELECT Country FROM scms_shipments
+ GROUP BY Country HAVING COUNT(*) > 100
+ ORDER BY SUM(CASE WHEN On_Time_Delivery = 'Late' 
+     THEN 1 ELSE 0 END) * 100.0 / COUNT(*) ASC
+ LIMIT 1) AS best_country,
+
+(SELECT Country FROM scms_shipments
+ GROUP BY Country HAVING COUNT(*) > 100
+ ORDER BY SUM(CASE WHEN On_Time_Delivery = 'Late' 
+     THEN 1 ELSE 0 END) * 100.0 / COUNT(*) DESC
+ LIMIT 1) AS worst_country
+   FROM scms_shipments
+   WHERE Shipment_Mode != 'Unknown';
+	
+        
+        
+
+
+
