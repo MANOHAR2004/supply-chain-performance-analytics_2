@@ -4,7 +4,7 @@ import os
 
 # Create connection using SQLAlchemy
 engine = create_engine(
-    "mysql+pymysql://root:Mano%232002%40@localhost/supply_chain_db"
+    "mysql+pymysql://root:Add_your_mysqlpassword@localhost/supply_chain_db"
 )
 
 # Create output directory if it doesn't exist
