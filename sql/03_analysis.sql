@@ -794,6 +794,7 @@ SELECT COUNT(*) AS total_shipment,
 	
         
         
-
+select Vendor, COUNT(*) AS total_shipments  from scms_shipments 
+where Vendor = 'SCMS from RDC';
 
 

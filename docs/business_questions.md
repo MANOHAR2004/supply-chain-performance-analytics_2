@@ -64,17 +64,23 @@ beyond just operational inefficiency.
 **Data Used:**
 Vendor, On_Time_Delivery, Delivery_Delay_Days
 
+**Data Note:** SCMS from RDC total shipments = 5,404 overall.
+Query 2 reported 5,092 due to WHERE Shipment_Mode != 'Unknown'
+filter excluding 312 SCMS rows with unrecorded shipment mode.
+Dashboard uses unfiltered 16.22% late rate as complete picture.
+SQL Query 2 filtered rate (15.30%) represents mode-specific analysis only.
+
 **SQL Reference:** 03_analysis.sql — Query 2
 
 **Key Finding:**
-- SCMS from RDC: 15.30% late rate (827 late from 5,404
+- SCMS from RDC: 16.22% late rate (826 late from 5,092
   shipments — single largest risk vendor)
 - BIO-RAD LABORATORIES: 14.29% late rate
 - CIPLA LIMITED: 12.57% late rate
 - Aurobindo Pharma: 12.13% late rate (high volume risk)
 
 **Recommendation:**
-SCMS from RDC handles 52% of all shipments with 15.3%
+SCMS from RDC handles 52% of all shipments with 16.2%
 late rate — this requires immediate escalation. Recommend
 performance improvement plan with penalty clauses for
 vendors exceeding 10% late rate threshold.
