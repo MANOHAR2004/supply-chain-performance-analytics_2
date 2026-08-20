@@ -19,6 +19,20 @@ This project demonstrates a complete data analytics pipeline:
 Python (EDA + cleaning) → MySQL (schema + analysis) → 
 Power BI (interactive dashboard).
 
+![Dashboard Preview_page_2](<img width="1324" height="743" alt="image" src="https://github.com/user-attachments/assets/6fa36d15-0098-4ecc-90b8-b1f7aad21657" />
+
+
+)
+
+![Dashboard Preview_page_1](<img width="1328" height="739" alt="image" src="https://github.com/user-attachments/assets/7a69576c-8b17-4728-aa79-eb0435b56d1e" />
+
+
+
+)
+
+![Dashboard Demo](<img width="1389" height="793" alt="ShareX_cSUNl77FUh" src="https://github.com/user-attachments/assets/a2ff2810-d8ee-427e-8f11-8ab087e817f3" />
+
+
 ---
 
 ## Business Problem
@@ -369,7 +383,7 @@ python 03_export_for_powerbi.py
 ```
 
 Open `powerbi/dashboard.pbix` in Power BI Desktop.
-Update data source path to your local `data/processed/` folder.
+Update the data source path to your local `data/processed/` folder.
 Click Refresh.
 
 ---
@@ -402,7 +416,7 @@ Python · MySQL · Power BI · DAX
   RDC as highest-risk vendor (16.22% late rate, 5,404 shipments)
 - Built 4-page interactive Power BI dashboard with 25+ DAX 
   measures revealing 2010-2011 delivery crisis where on-time 
-  rate collapsed from 98% to 62% — traced to single vendor 
+  rate collapsed from 98% to 62% — traced to a single vendor 
   causing programme-wide failure across 17 countries
 
 ---
